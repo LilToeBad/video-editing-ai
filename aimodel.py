@@ -101,9 +101,13 @@ def process_clips(input_dir, output):
             print(f"Processed {filename}: {label}")
     
     # Save metadata to JSON
-    with open(output, "w") as f:
-        json.dump(metadata, f, indent=4)
-    print(f"Metadata saved  to {output}")
+    try:
+        assert isinstance(metadata, dict)
+        with open(output, "w") as f:
+            json.dump(metadata, f, indent=4)
+        print(f"Metadata saved  to {output}")
+    except Exception as e:
+        print(f"Error saving metadata to JSOJN: {e}")
 
 
 # Run script
