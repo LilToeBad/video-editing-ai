@@ -19,6 +19,14 @@ Date: 11/01/24
     - Background music or sound effects.
     - Text overlays for annotations or timestamps.
 
+  ### Packages
+  - Pydub: For extracting and analyzing audio.
+  - FFmpeg: Backend audio dependency.
+  - Opencv-python: For reading and extracting frames and processing visuals.
+  - Ultralytics: For using YOLO object detection.
+  - Numpy: For numerical operations.
+  - librosa: For advanced audio feature extraction.
+
 ## Model Features
   ### Clip Selection:
   - AI to identify and extract highlights from the raw clips.
@@ -40,3 +48,4 @@ For public usage.
 ## Important Files
 
 ## References
+https://github.com/jiaaro/pydub: For pydub documentation
