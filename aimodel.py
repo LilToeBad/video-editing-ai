@@ -3,6 +3,7 @@ from ultralytics import YOLO
 from pydub import AudioSegment
 from pydub.silence import detect_nonsilent
 import numpy as np
+import contextlib
 import os
 import json
 
@@ -48,8 +49,11 @@ def extract_video(video_path):
             if not ret:
                 break
 
-            # Get the objects
-            results = model(frame)
+            with open(os.devnull, 'w') as f, contextlib.redirect_stdout(f):      
+                # Get the objects
+                results = model(frame)
+            
+            # Extract object names
             for result in results:
                 detected_objects.update(result.names)
         
@@ -108,5 +112,5 @@ if __name__ == "__main__":
     if not os.path.exists(input_directory):
         print(f"Error: Input directory '{input_directory}' does not exist.")
         exit(1)
-        
+
     process_clips(input_directory, output_metadata)
