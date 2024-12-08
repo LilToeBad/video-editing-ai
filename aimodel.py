@@ -104,4 +104,9 @@ def process_clips(input_dir, output):
 if __name__ == "__main__":
     input_directory = "clips/"
     output_metadata = "metadata.json"
+
+    if not os.path.exists(input_directory):
+        print(f"Error: Input directory '{input_directory}' does not exist.")
+        exit(1)
+        
     process_clips(input_directory, output_metadata)
