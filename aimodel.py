@@ -37,7 +37,7 @@ def extract_video(video_path):
     """Analyze video frames and video patterns"""
     try:
         # Load YOLO model
-        model = YOLO("yolov8n.pt")
+        model = YOLO("yolov8n.pt", verbose=False)
 
         # Open video file
         clip = cv2.VideoCapture(video_path)
@@ -48,15 +48,17 @@ def extract_video(video_path):
             ret, frame = clip.read()
             if not ret:
                 break
-
+            
+            resized_frame = cv2.resize(frame, (320, 240))
             with open(os.devnull, 'w') as f, contextlib.redirect_stdout(f):      
                 # Get the objects
-                results = model(frame)
+                results = model(resized_frame)
             
             # Extract object names
             for result in results:
-                detected_objects.update(result.names)
+                detected_objects.update([obj for obj in result.names if obj])
         
+
         # End Clip
         clip.release()
 
