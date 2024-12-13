@@ -9,6 +9,12 @@ import json
 
 print("All packages imported successfully!")
 
+def get_audio_intensity(audio):
+        """Analyze the total duration of nonsilent segments."""
+        nonsilent = detect_nonsilent(audio, min_silence_len=300, silence_thresh=-25)
+        loud = sum((end - start) for start, end in nonsilent) / 1000 # Second conversion
+        return loud
+
 def extract_audio(video_path):
     """Analyze audio for sound patterns and volume"""
     try:
