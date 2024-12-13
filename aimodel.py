@@ -3,6 +3,7 @@ from ultralytics import YOLO
 from pydub import AudioSegment
 from pydub.silence import detect_nonsilent
 import numpy as np
+import whisper
 import contextlib
 import os
 import json
@@ -15,6 +16,18 @@ def get_audio_intensity(audio):
         loud = sum((end - start) for start, end in nonsilent) / 1000 # Second conversion
         return loud
 
+def analyze_speech(audio_path):
+    """Transcribe audio and analyze for keywords."""
+    model = whisper.load_model("base")
+    result = model.transcribe(audio_path)
+    speech = result["text"].lower()
+
+    if any(word in speech for word in ["shoot", "run", "hardpoint", "fire", "explode"]):
+        return "action"
+    elif any(word in speech for word in ["laugh", "funny", "joke"]):
+        return "funny"
+    return "calm"
+
 def extract_audio(video_path):
     """Analyze audio for sound patterns and volume"""
     try:
@@ -22,13 +35,15 @@ def extract_audio(video_path):
         audio = AudioSegment.from_file(video_path)
 
         # Detect louder moments
-        nonsilent = detect_nonsilent(audio, min_silence_len=500, silence_thresh=-30)
-        num_segments = len(nonsilent)
+        nonsilent = get_audio_intensity(audio)
+
+        # Speech analysis
+        speech_label = analyze_speech(video_path)
 
         # Rules
-        if num_segments > 10: # More than 10 loud segments detected
+        if nonsilent > 30 or speech_label == "action": # More than 30 loud segments detected
             return "action"
-        elif "laughter" in audio.raw_data.decode(errors="ignore"):
+        elif speech_label == "funny":
             return "funny"
         else:
             return "calm"
@@ -39,6 +54,31 @@ def extract_audio(video_path):
         print(f"Error processing audio for {video_path}: {e}")
         return "error"
 
+def count_action_objects(dectected):
+    """Count occurrences of action-related objects."""
+    action_objects = {"gun", "explosion", "car", "knife"}
+    return sum(1 for object in dectected if object in action_objects)
+
+def new_scene(video_path):
+    """Detect new scene changes."""
+    capture = cv2.VideoCapture(video_path)
+    previous_frame = None
+    changes = 0
+
+    while capture.isOpened():
+        ret, frame = capture.read()
+        if not ret:
+            break
+        if previous_frame is not None:
+            diff = cv2.absdiff(frame, previous_frame)
+            counter = cv2.countNonZero(cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY))
+            if counter > 5000: # New scene detected
+                changes += 1
+        previous_frame = frame
+    capture.release()
+    return changes
+
+
 def extract_video(video_path):
     """Analyze video frames and video patterns"""
     try:
@@ -47,29 +87,28 @@ def extract_video(video_path):
 
         # Open video file
         clip = cv2.VideoCapture(video_path)
-        action_objects = {"explosion", "gun", "vechicle"}   # Can Update to your liking
-        detected_objects = set()
+        detected_objects = []
 
         while clip.isOpened():
             ret, frame = clip.read()
             if not ret:
                 break
             
-            resized_frame = cv2.resize(frame, (320, 240))
-            with open(os.devnull, 'w') as f, contextlib.redirect_stdout(f):      
-                # Get the objects
-                results = model(resized_frame)
-            
-            # Extract object names
+            results = model(frame)
             for result in results:
-                detected_objects.update([obj for obj in result.names if obj])
-        
+                detected_objects.extend(result.names)
 
         # End Clip
         clip.release()
 
+        # Scence changes
+        scences = new_scene(video_path)
+
+        # Combine results for action
+        action_count = count_action_objects(detected_objects)
+
         # Rules
-        if action_objects & detected_objects:   # Check if they both were found
+        if action_count > 10 or scences > 20:   # Check if they both were found
             return "action"
         elif "funny_face" in detected_objects:  # Face cam applicable
             return "funny"
